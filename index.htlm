@@ -163,7 +163,6 @@
       box-shadow: 0 0 0 4px var(--focus-ring);
     }
 
-    /* Hide the honeypot field from humans completely */
     .bot-trap {
       position: absolute;
       opacity: 0;
@@ -319,7 +318,6 @@
       <h2 class="section-title">New Project Intake Form</h2>
       <form id="intake-form">
         
-        <!-- HONEYPOT FIELD: Bots will fill this out, triggering the backend trap -->
         <input type="text" name="botTrap" id="botTrap" class="bot-trap" tabindex="-1" autocomplete="off" placeholder="Leave this empty">
 
         <div class="form-grid">
@@ -373,7 +371,6 @@
   </div>
 
   <script>
-    // UPDATE THIS URL AFTER DEPLOYING THE NEW APPS SCRIPT
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxJPn1CBRN7pj29J3J8gRrvWdzNzcx2Igd1BREDlNMRcGO0qYrFPb-4j1ynHQ38tR3bcg/exec';
 
     document.getElementById('intake-form').addEventListener('submit', async function(e) {
@@ -382,7 +379,6 @@
       const btn = document.getElementById('submit-btn');
       const status = document.getElementById('status-message');
       
-      // Append the security token dynamically on submit
       const formData = new FormData(this);
       formData.append('appToken', 'SimplyDoors2026-Secure');
       
