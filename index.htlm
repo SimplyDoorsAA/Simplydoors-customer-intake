@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>New Project Intake | SimplyDoors</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --brand-primary: #0f172a;
+      --brand-accent: #0284c7;
+      --brand-accent-hover: #0369a1;
+      --bg-color: #f1f5f9;
+      --card-bg: #ffffff;
+      --text-main: #334155;
+      --text-muted: #64748b;
+      --border-color: #cbd5e1;
+      --focus-ring: rgba(2, 132, 199, 0.15);
+      --success-bg: #f0fdf4;
+      --success-text: #166534;
+      --error-bg: #fef2f2;
+      --error-text: #991b1b;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      margin: 0;
+      padding: 3rem 1rem;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+
+    .app-container {
+      background: var(--card-bg);
+      border-radius: 12px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+      width: 100%;
+      max-width: 900px;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+      position: relative;
+    }
+
+    .brand-header {
+      background-color: var(--brand-primary);
+      padding: 2rem 3rem;
+      color: #ffffff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header-text {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .logo {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      margin: 0;
+    }
+
+    .logo span {
+      color: #38bdf8;
+    }
+
+    .subtitle {
+      font-size: 0.875rem;
+      color: #94a3b8;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .share-controls {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .icon-btn {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #fff;
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .icon-btn:hover {
+      background: rgba(255,255,255,0.2);
+    }
+
+    .form-wrapper {
+      padding: 2.5rem 3rem;
+    }
+
+    .section-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--brand-primary);
+      margin-top: 0;
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .full-width {
+      grid-column: span 2;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.375rem;
+    }
+
+    label {
+      font-weight: 500;
+      font-size: 0.875rem;
+      color: var(--brand-primary);
+    }
+
+    input, textarea, select {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 1rem;
+      font-family: inherit;
+      color: var(--text-main);
+      background-color: #f8fafc;
+      transition: all 0.2s;
+      box-sizing: border-box;
+    }
+
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--brand-accent);
+      background-color: #ffffff;
+      box-shadow: 0 0 0 4px var(--focus-ring);
+    }
+
+    /* Hide the honeypot field from humans completely */
+    .bot-trap {
+      position: absolute;
+      opacity: 0;
+      top: -9999px;
+      left: -9999px;
+      z-index: -1;
+    }
+
+    button.submit-btn {
+      background-color: var(--brand-accent);
+      color: #fff;
+      border: none;
+      padding: 1rem 2rem;
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      width: 100%;
+      transition: background-color 0.2s;
+    }
+
+    button.submit-btn:hover {
+      background-color: var(--brand-accent-hover);
+    }
+
+    button.submit-btn:disabled {
+      background-color: #94a3b8;
+      cursor: not-allowed;
+    }
+
+    #status-message {
+      margin-top: 1.5rem;
+      font-weight: 500;
+      font-size: 0.9375rem;
+      text-align: center;
+      padding: 1rem;
+      border-radius: 6px;
+      display: none;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.7);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      backdrop-filter: blur(4px);
+    }
+
+    .modal-content {
+      background: #fff;
+      padding: 2rem;
+      border-radius: 12px;
+      text-align: center;
+      width: 90%;
+      max-width: 320px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+
+    .modal-content h3 {
+      margin-top: 0;
+      color: var(--brand-primary);
+    }
+
+    #qr-image {
+      margin: 1.5rem 0;
+      width: 200px;
+      height: 200px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.5rem;
+    }
+
+    .close-modal {
+      background: var(--bg-color);
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      width: 100%;
+    }
+
+    @media (max-width: 820px) {
+      .brand-header {
+        padding: 1.5rem 2rem;
+      }
+      .form-wrapper {
+        padding: 2rem 2rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 0;
+      }
+      .app-container {
+        border-radius: 0;
+        border: none;
+        box-shadow: none;
+        min-height: 100vh;
+      }
+      .brand-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 1.5rem;
+      }
+      .share-controls {
+        width: 100%;
+      }
+      .icon-btn {
+        flex: 1;
+        justify-content: center;
+      }
+      .form-wrapper {
+        padding: 1.5rem;
+      }
+      .form-grid {
+        grid-template-columns: 1fr;
+        gap: 1.25rem;
+      }
+      .full-width {
+        grid-column: span 1;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    <header class="brand-header">
+      <div class="header-text">
+        <div class="subtitle">Project Management Portal</div>
+        <h1 class="logo">Simply<span>Doors</span></h1>
+      </div>
+      <div class="share-controls">
+        <button class="icon-btn" onclick="shareApp()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>
+          Share
+        </button>
+        <button class="icon-btn" onclick="showQR()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 3h6v6H3zM15 3h6v6h-6zM3 15h6v6H3zM21 21v.01M15 15h.01M18 18h.01M21 15h.01M15 21h.01M18 15v3M15 18v3"/></svg>
+          QR
+        </button>
+      </div>
+    </header>
+
+    <div class="form-wrapper">
+      <h2 class="section-title">New Project Intake Form</h2>
+      <form id="intake-form">
+        
+        <!-- HONEYPOT FIELD: Bots will fill this out, triggering the backend trap -->
+        <input type="text" name="botTrap" id="botTrap" class="bot-trap" tabindex="-1" autocomplete="off" placeholder="Leave this empty">
+
+        <div class="form-grid">
+          <div class="input-group">
+            <label for="companyName">Company / Builder Name</label>
+            <input type="text" id="companyName" name="companyName" placeholder="e.g., Summit Construction" required>
+          </div>
+          <div class="input-group">
+            <label for="contactName">Primary Contact</label>
+            <input type="text" id="contactName" name="contactName" placeholder="Full Name" required>
+          </div>
+          
+          <div class="input-group">
+            <label for="phone">Phone Number</label>
+            <input type="tel" id="phone" name="phone" placeholder="(555) 123-4567" required>
+          </div>
+          <div class="input-group">
+            <label for="email">Email Address</label>
+            <input type="email" id="email" name="email" placeholder="contact@company.com" required>
+          </div>
+
+          <div class="input-group full-width">
+            <label for="billingAddress">Billing Address</label>
+            <input type="text" id="billingAddress" name="billingAddress" placeholder="Street, City, State, ZIP" required>
+          </div>
+
+          <div class="input-group full-width">
+            <label for="jobSiteAddress">Job Site Address</label>
+            <input type="text" id="jobSiteAddress" name="jobSiteAddress" placeholder="Street, City, State, ZIP" required>
+          </div>
+
+          <div class="input-group full-width">
+            <label for="projectScope">Project Scope & Specifications</label>
+            <textarea id="projectScope" name="projectScope" rows="5" placeholder="Specify required doors, window units, tempered glass needs, and trim details..." required></textarea>
+          </div>
+        </div>
+
+        <button type="submit" class="submit-btn" id="submit-btn">Submit Project Details</button>
+        <div id="status-message"></div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="qr-modal">
+    <div class="modal-content">
+      <h3>Scan to Open</h3>
+      <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0;">Point a phone camera here to load the intake form.</p>
+      <img id="qr-image" src="" alt="QR Code">
+      <button class="close-modal" onclick="closeQR()">Close</button>
+    </div>
+  </div>
+
+  <script>
+    // UPDATE THIS URL AFTER DEPLOYING THE NEW APPS SCRIPT
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxJPn1CBRN7pj29J3J8gRrvWdzNzcx2Igd1BREDlNMRcGO0qYrFPb-4j1ynHQ38tR3bcg/exec';
+
+    document.getElementById('intake-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const btn = document.getElementById('submit-btn');
+      const status = document.getElementById('status-message');
+      
+      // Append the security token dynamically on submit
+      const formData = new FormData(this);
+      formData.append('appToken', 'SimplyDoors2026-Secure');
+      
+      btn.textContent = 'Submitting Data...';
+      btn.disabled = true;
+      status.style.display = 'none';
+
+      try {
+        await fetch(SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          body: formData
+        });
+        
+        status.textContent = 'Project intake submitted successfully.';
+        status.style.display = 'block';
+        status.style.backgroundColor = 'var(--success-bg)';
+        status.style.color = 'var(--success-text)';
+        status.style.border = '1px solid #bbf7d0';
+        this.reset();
+      } catch (error) {
+        status.textContent = 'Network error. Please check your connection.';
+        status.style.display = 'block';
+        status.style.backgroundColor = 'var(--error-bg)';
+        status.style.color = 'var(--error-text)';
+        status.style.border = '1px solid #fecaca';
+      } finally {
+        btn.textContent = 'Submit Project Details';
+        btn.disabled = false;
+      }
+    });
+
+    async function shareApp() {
+      const currentUrl = window.location.href;
+      const shareData = {
+        title: 'SimplyDoors | New Project Intake',
+        text: 'Please fill out your project and site details here:',
+        url: currentUrl
+      };
+
+      if (navigator.share) {
+        try { await navigator.share(shareData); } catch (err) {}
+      } else {
+        navigator.clipboard.writeText(currentUrl).then(() => { alert('Link copied to clipboard!'); });
+      }
+    }
+
+    function showQR() {
+      const modal = document.getElementById('qr-modal');
+      const qrImg = document.getElementById('qr-image');
+      const currentUrl = encodeURIComponent(window.location.href);
+      qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${currentUrl}`;
+      modal.style.display = 'flex';
+    }
+
+    function closeQR() {
+      document.getElementById('qr-modal').style.display = 'none';
+    }
+  </script>
+</body>
+</html>
