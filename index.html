@@ -488,20 +488,28 @@
       const timeoutId = setTimeout(() => controller.abort(), SUBMIT_TIMEOUT_MS);
 
       try {
-        // Apps Script web app responses don't reliably expose CORS headers,
-        // so this is a fire-and-forget request: we can't read success/failure
-        // from the response, only detect that the request itself failed
-        // (offline, timeout, DNS). A true delivery failure on the backend
-        // will not surface here.
-        await fetch(SCRIPT_URL, {
+        // The Apps Script backend returns a JSON body — { result: 'success' }
+        // or { result: 'error', message } — so read it instead of firing the
+        // request blind. This is a plain FormData POST with no custom headers,
+        // so it's an unpreflighted "simple request" the browser sends either way.
+        const response = await fetch(SCRIPT_URL, {
           method: 'POST',
-          mode: 'no-cors',
           body: formData,
           signal: controller.signal
         });
 
-        setStatus('success', 'Project intake sent. Our team will follow up shortly.');
-        form.reset();
+        if (!response.ok) {
+          throw new Error(`http-${response.status}`);
+        }
+
+        const data = await response.json().catch(() => null);
+
+        if (data && data.result === 'success') {
+          setStatus('success', 'Project intake sent. Our team will follow up shortly.');
+          form.reset();
+        } else {
+          setStatus('error', (data && data.message) || 'Something went wrong submitting the form. Please try again.');
+        }
       } catch (error) {
         if (error.name === 'AbortError') {
           setStatus('error', 'The request timed out. Please check your connection and try again.');
