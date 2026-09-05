@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="SimplyDoors project intake form for builders and contractors to submit new door and window installation jobs.">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='4' fill='%230f172a'/%3E%3Crect x='6' y='4' width='12' height='16' rx='1' fill='%2338bdf8'/%3E%3Ccircle cx='14.5' cy='12' r='1' fill='%230f172a'/%3E%3C/svg%3E">
   <title>New Project Intake | SimplyDoors</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,8 +23,14 @@
       --focus-ring: rgba(2, 132, 199, 0.15);
       --success-bg: #f0fdf4;
       --success-text: #166534;
+      --success-border: #bbf7d0;
       --error-bg: #fef2f2;
       --error-text: #991b1b;
+      --error-border: #fecaca;
+    }
+
+    * {
+      box-sizing: border-box;
     }
 
     body {
@@ -34,7 +43,6 @@
       justify-content: center;
       align-items: flex-start;
       min-height: 100vh;
-      box-sizing: border-box;
     }
 
     .app-container {
@@ -106,6 +114,15 @@
       background: rgba(255,255,255,0.2);
     }
 
+    .icon-btn:focus-visible,
+    button.submit-btn:focus-visible,
+    .close-modal:focus-visible,
+    input:focus-visible,
+    textarea:focus-visible {
+      outline: 2px solid #38bdf8;
+      outline-offset: 2px;
+    }
+
     .form-wrapper {
       padding: 2.5rem 3rem;
     }
@@ -143,6 +160,11 @@
       color: var(--brand-primary);
     }
 
+    label .required {
+      color: var(--brand-accent);
+      font-weight: 600;
+    }
+
     input, textarea, select {
       width: 100%;
       padding: 0.75rem 1rem;
@@ -153,7 +175,6 @@
       color: var(--text-main);
       background-color: #f8fafc;
       transition: all 0.2s;
-      box-sizing: border-box;
     }
 
     input:focus, textarea:focus {
@@ -163,11 +184,17 @@
       box-shadow: 0 0 0 4px var(--focus-ring);
     }
 
+    input:invalid:not(:placeholder-shown) {
+      border-color: #f87171;
+    }
+
     .bot-trap {
       position: absolute;
       opacity: 0;
       top: -9999px;
       left: -9999px;
+      height: 0;
+      width: 0;
       z-index: -1;
     }
 
@@ -182,15 +209,34 @@
       cursor: pointer;
       width: 100%;
       transition: background-color 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.625rem;
     }
 
-    button.submit-btn:hover {
+    button.submit-btn:hover:not(:disabled) {
       background-color: var(--brand-accent-hover);
     }
 
     button.submit-btn:disabled {
       background-color: #94a3b8;
       cursor: not-allowed;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 1rem;
+      height: 1rem;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
 
     #status-message {
@@ -201,6 +247,20 @@
       padding: 1rem;
       border-radius: 6px;
       display: none;
+    }
+
+    #status-message.success {
+      display: block;
+      background-color: var(--success-bg);
+      color: var(--success-text);
+      border: 1px solid var(--success-border);
+    }
+
+    #status-message.error {
+      display: block;
+      background-color: var(--error-bg);
+      color: var(--error-text);
+      border: 1px solid var(--error-border);
     }
 
     .modal-overlay {
@@ -292,6 +352,12 @@
         grid-column: span 1;
       }
     }
+
+    @media (prefers-reduced-motion: reduce) {
+      .spinner {
+        animation-duration: 1.4s;
+      }
+    }
   </style>
 </head>
 <body>
@@ -303,12 +369,12 @@
         <h1 class="logo">Simply<span>Doors</span></h1>
       </div>
       <div class="share-controls">
-        <button class="icon-btn" onclick="shareApp()">
-          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>
+        <button type="button" class="icon-btn" onclick="shareApp()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>
           Share
         </button>
-        <button class="icon-btn" onclick="showQR()">
-          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 3h6v6H3zM15 3h6v6h-6zM3 15h6v6H3zM21 21v.01M15 15h.01M18 18h.01M21 15h.01M15 21h.01M18 15v3M15 18v3"/></svg>
+        <button type="button" class="icon-btn" onclick="showQR()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h6v6H3zM15 3h6v6h-6zM3 15h6v6H3zM21 21v.01M15 15h.01M18 18h.01M21 15h.01M15 21h.01M18 15v3M15 18v3"/></svg>
           QR
         </button>
       </div>
@@ -316,98 +382,135 @@
 
     <div class="form-wrapper">
       <h2 class="section-title">New Project Intake Form</h2>
-      <form id="intake-form">
-        
-        <input type="text" name="botTrap" id="botTrap" class="bot-trap" tabindex="-1" autocomplete="off" placeholder="Leave this empty">
+      <form id="intake-form" novalidate>
+
+        <input type="text" name="botTrap" id="botTrap" class="bot-trap" tabindex="-1" autocomplete="off" aria-hidden="true" placeholder="Leave this empty">
 
         <div class="form-grid">
           <div class="input-group">
-            <label for="companyName">Company / Builder Name</label>
-            <input type="text" id="companyName" name="companyName" placeholder="e.g., Summit Construction" required>
+            <label for="companyName">Company / Builder Name <span class="required" aria-hidden="true">*</span></label>
+            <input type="text" id="companyName" name="companyName" autocomplete="organization" placeholder="e.g., Summit Construction" required>
           </div>
           <div class="input-group">
-            <label for="contactName">Primary Contact</label>
-            <input type="text" id="contactName" name="contactName" placeholder="Full Name" required>
+            <label for="contactName">Primary Contact <span class="required" aria-hidden="true">*</span></label>
+            <input type="text" id="contactName" name="contactName" autocomplete="name" placeholder="Full Name" required>
           </div>
-          
+
           <div class="input-group">
-            <label for="phone">Phone Number</label>
-            <input type="tel" id="phone" name="phone" placeholder="(555) 123-4567" required>
+            <label for="phone">Phone Number <span class="required" aria-hidden="true">*</span></label>
+            <input type="tel" id="phone" name="phone" autocomplete="tel" inputmode="tel" placeholder="(555) 123-4567" required>
           </div>
           <div class="input-group">
-            <label for="email">Email Address</label>
-            <input type="email" id="email" name="email" placeholder="contact@company.com" required>
+            <label for="email">Email Address <span class="required" aria-hidden="true">*</span></label>
+            <input type="email" id="email" name="email" autocomplete="email" inputmode="email" placeholder="contact@company.com" required>
           </div>
 
           <div class="input-group full-width">
-            <label for="billingAddress">Billing Address</label>
-            <input type="text" id="billingAddress" name="billingAddress" placeholder="Street, City, State, ZIP" required>
+            <label for="billingAddress">Billing Address <span class="required" aria-hidden="true">*</span></label>
+            <input type="text" id="billingAddress" name="billingAddress" autocomplete="street-address" placeholder="Street, City, State, ZIP" required>
           </div>
 
           <div class="input-group full-width">
-            <label for="jobSiteAddress">Job Site Address</label>
-            <input type="text" id="jobSiteAddress" name="jobSiteAddress" placeholder="Street, City, State, ZIP" required>
+            <label for="jobSiteAddress">Job Site Address <span class="required" aria-hidden="true">*</span></label>
+            <input type="text" id="jobSiteAddress" name="jobSiteAddress" autocomplete="off" placeholder="Street, City, State, ZIP" required>
           </div>
 
           <div class="input-group full-width">
-            <label for="projectScope">Project Scope & Specifications</label>
+            <label for="projectScope">Project Scope &amp; Specifications <span class="required" aria-hidden="true">*</span></label>
             <textarea id="projectScope" name="projectScope" rows="5" placeholder="Specify required doors, window units, tempered glass needs, and trim details..." required></textarea>
           </div>
         </div>
 
-        <button type="submit" class="submit-btn" id="submit-btn">Submit Project Details</button>
-        <div id="status-message"></div>
+        <button type="submit" class="submit-btn" id="submit-btn">
+          <span id="submit-btn-label">Submit Project Details</span>
+        </button>
+        <div id="status-message" role="status" aria-live="polite"></div>
       </form>
     </div>
   </div>
 
   <div class="modal-overlay" id="qr-modal">
-    <div class="modal-content">
-      <h3>Scan to Open</h3>
+    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="qr-modal-title">
+      <h3 id="qr-modal-title">Scan to Open</h3>
       <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0;">Point a phone camera here to load the intake form.</p>
-      <img id="qr-image" src="" alt="QR Code">
-      <button class="close-modal" onclick="closeQR()">Close</button>
+      <img id="qr-image" src="" alt="QR code linking to this intake form">
+      <button type="button" class="close-modal" id="qr-close-btn" onclick="closeQR()">Close</button>
     </div>
   </div>
 
   <script>
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxJPn1CBRN7pj29J3J8gRrvWdzNzcx2Igd1BREDlNMRcGO0qYrFPb-4j1ynHQ38tR3bcg/exec';
+    // Identifies this front end to the Apps Script backend; it is embedded in
+    // client JS and visible to anyone, so it is NOT an access-control secret.
+    // Real abuse prevention (rate limiting, validation) must live server-side.
+    const APP_TOKEN = 'SimplyDoors2026-Secure';
+    const SUBMIT_TIMEOUT_MS = 15000;
 
-    document.getElementById('intake-form').addEventListener('submit', async function(e) {
+    const form = document.getElementById('intake-form');
+    const submitBtn = document.getElementById('submit-btn');
+    const submitBtnLabel = document.getElementById('submit-btn-label');
+    const status = document.getElementById('status-message');
+
+    function setStatus(kind, message) {
+      status.textContent = message;
+      status.className = kind;
+    }
+
+    function setSubmitting(isSubmitting) {
+      submitBtn.disabled = isSubmitting;
+      submitBtnLabel.textContent = isSubmitting ? 'Submitting...' : 'Submit Project Details';
+      const existingSpinner = submitBtn.querySelector('.spinner');
+      if (isSubmitting && !existingSpinner) {
+        const spinner = document.createElement('span');
+        spinner.className = 'spinner';
+        spinner.setAttribute('aria-hidden', 'true');
+        submitBtn.prepend(spinner);
+      } else if (!isSubmitting && existingSpinner) {
+        existingSpinner.remove();
+      }
+    }
+
+    form.addEventListener('submit', async function (e) {
       e.preventDefault();
-      
-      const btn = document.getElementById('submit-btn');
-      const status = document.getElementById('status-message');
-      
-      const formData = new FormData(this);
-      formData.append('appToken', 'SimplyDoors2026-Secure');
-      
-      btn.textContent = 'Submitting Data...';
-      btn.disabled = true;
-      status.style.display = 'none';
+
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
+
+      const formData = new FormData(form);
+      formData.append('appToken', APP_TOKEN);
+
+      setSubmitting(true);
+      status.className = '';
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), SUBMIT_TIMEOUT_MS);
 
       try {
+        // Apps Script web app responses don't reliably expose CORS headers,
+        // so this is a fire-and-forget request: we can't read success/failure
+        // from the response, only detect that the request itself failed
+        // (offline, timeout, DNS). A true delivery failure on the backend
+        // will not surface here.
         await fetch(SCRIPT_URL, {
           method: 'POST',
           mode: 'no-cors',
-          body: formData
+          body: formData,
+          signal: controller.signal
         });
-        
-        status.textContent = 'Project intake submitted successfully.';
-        status.style.display = 'block';
-        status.style.backgroundColor = 'var(--success-bg)';
-        status.style.color = 'var(--success-text)';
-        status.style.border = '1px solid #bbf7d0';
-        this.reset();
+
+        setStatus('success', 'Project intake sent. Our team will follow up shortly.');
+        form.reset();
       } catch (error) {
-        status.textContent = 'Network error. Please check your connection.';
-        status.style.display = 'block';
-        status.style.backgroundColor = 'var(--error-bg)';
-        status.style.color = 'var(--error-text)';
-        status.style.border = '1px solid #fecaca';
+        if (error.name === 'AbortError') {
+          setStatus('error', 'The request timed out. Please check your connection and try again.');
+        } else {
+          setStatus('error', 'Network error. Please check your connection and try again.');
+        }
       } finally {
-        btn.textContent = 'Submit Project Details';
-        btn.disabled = false;
+        clearTimeout(timeoutId);
+        setSubmitting(false);
       }
     });
 
@@ -420,23 +523,55 @@
       };
 
       if (navigator.share) {
-        try { await navigator.share(shareData); } catch (err) {}
+        try {
+          await navigator.share(shareData);
+        } catch (err) {
+          if (err.name !== 'AbortError') {
+            copyLinkFallback(currentUrl);
+          }
+        }
       } else {
-        navigator.clipboard.writeText(currentUrl).then(() => { alert('Link copied to clipboard!'); });
+        copyLinkFallback(currentUrl);
       }
     }
 
+    function copyLinkFallback(url) {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(
+          () => alert('Link copied to clipboard!'),
+          () => alert(url)
+        );
+      } else {
+        alert(url);
+      }
+    }
+
+    let qrTriggerEl = null;
+
     function showQR() {
+      qrTriggerEl = document.activeElement;
       const modal = document.getElementById('qr-modal');
       const qrImg = document.getElementById('qr-image');
       const currentUrl = encodeURIComponent(window.location.href);
       qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${currentUrl}`;
       modal.style.display = 'flex';
+      document.addEventListener('keydown', onModalKeydown);
+      document.getElementById('qr-close-btn').focus();
     }
 
     function closeQR() {
       document.getElementById('qr-modal').style.display = 'none';
+      document.removeEventListener('keydown', onModalKeydown);
+      if (qrTriggerEl) qrTriggerEl.focus();
     }
+
+    function onModalKeydown(e) {
+      if (e.key === 'Escape') closeQR();
+    }
+
+    document.getElementById('qr-modal').addEventListener('click', function (e) {
+      if (e.target === this) closeQR();
+    });
   </script>
 </body>
 </html>
