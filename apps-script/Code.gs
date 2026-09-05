@@ -1,18 +1,28 @@
 /**
  * SimplyDoors project intake form backend.
  *
- * Deployment: paste this into the Apps Script project bound to the intake
- * spreadsheet (Extensions > Apps Script), then Deploy > Manage deployments >
- * edit the existing web app deployment > New version, so the live /exec URL
- * served to index.html actually picks up these changes. Editing the code
- * alone does not update a deployment already in use.
+ * Writes to the "SimplyDoors Project Intake" spreadsheet by ID (see
+ * SPREADSHEET_ID below), so this works whether the Apps Script project is
+ * bound to that sheet or standalone.
+ *
+ * Deployment: paste this into whichever Apps Script project /exec URL is
+ * referenced by SCRIPT_URL in index.html, then Deploy > Manage deployments >
+ * edit the existing web app deployment > New version, so that URL actually
+ * picks up these changes. Editing the code alone does not update a
+ * deployment already in use.
  */
 
 const APP_TOKEN = 'SimplyDoors2026-Secure';
 const NOTIFY_EMAIL = 'adem@simplydoors.com';
+// The "SimplyDoors Project Intake" spreadsheet. Addressed explicitly by ID
+// rather than via SpreadsheetApp.getActiveSpreadsheet() — a standalone
+// script project (one opened from script.google.com or Drive rather than
+// via Extensions > Apps Script from inside the sheet) has no "active
+// spreadsheet" at all and getActiveSpreadsheet() returns null, so this
+// works regardless of whether this project is bound to the sheet or not.
+const SPREADSHEET_ID = '19wstlrr2cPf3_hvW836lOFqQ_faXvV_jq9jBx0ySBzo';
 // Sheet tab submissions are written to. If no sheet with this name exists,
-// falls back to whichever sheet is currently active (see getSubmissionsSheet)
-// so this change can't orphan existing data in a differently-named tab.
+// falls back to the spreadsheet's first sheet (see getSubmissionsSheet).
 const SHEET_NAME = 'Submissions';
 
 function doPost(e) {
@@ -112,16 +122,15 @@ function notifyTeam(data) {
 }
 
 function getSubmissionsSheet() {
-  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = spreadsheet.getSheetByName(SHEET_NAME);
   if (sheet) return sheet;
 
   // No sheet named SHEET_NAME exists yet. Rather than risk creating a
-  // second, empty tab alongside your existing data, keep using whichever
-  // sheet is active — the same behavior as before this change. Rename your
-  // submissions tab to "Submissions" (or update SHEET_NAME) so this
-  // resolves reliably even if a different tab was last viewed in the UI.
-  return spreadsheet.getActiveSheet();
+  // second, empty tab alongside your existing data, use the spreadsheet's
+  // first sheet. Rename your submissions tab to "Submissions" (or update
+  // SHEET_NAME) so this resolves by name instead of position.
+  return spreadsheet.getSheets()[0];
 }
 
 function isValidEmail(value) {
