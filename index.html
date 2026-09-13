@@ -15,6 +15,9 @@
       --brand-primary: #0f172a;
       --brand-accent: #0284c7;
       --brand-accent-hover: #0369a1;
+      --brand-green: #0d9488;
+      --brand-green-bg: #f0fdfa;
+      --brand-green-border: #99f6e4;
       --bg-color: #f1f5f9;
       --card-bg: #ffffff;
       --text-main: #334155;
@@ -50,7 +53,7 @@
       border-radius: 12px;
       box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
       width: 100%;
-      max-width: 900px;
+      max-width: 640px;
       overflow: hidden;
       border: 1px solid #e2e8f0;
       position: relative;
@@ -118,7 +121,8 @@
     button.submit-btn:focus-visible,
     .close-modal:focus-visible,
     input:focus-visible,
-    textarea:focus-visible {
+    textarea:focus-visible,
+    .dropzone:focus-within {
       outline: 2px solid #38bdf8;
       outline-offset: 2px;
     }
@@ -165,6 +169,11 @@
       font-weight: 600;
     }
 
+    label .optional-hint {
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
     input, textarea, select {
       width: 100%;
       padding: 0.75rem 1rem;
@@ -196,6 +205,84 @@
       height: 0;
       width: 0;
       z-index: -1;
+    }
+
+    .dropzone {
+      border: 2px dashed var(--brand-green-border);
+      border-radius: 8px;
+      padding: 1.25rem 1rem;
+      text-align: center;
+      background: var(--brand-green-bg);
+      cursor: pointer;
+      display: block;
+    }
+
+    .dropzone input[type="file"] {
+      position: absolute;
+      opacity: 0;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+    }
+
+    .dropzone-icon {
+      color: var(--brand-green);
+      display: block;
+      margin: 0 auto 0.5rem;
+    }
+
+    .dropzone-title {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: var(--brand-primary);
+    }
+
+    .dropzone-hint {
+      font-size: 0.8125rem;
+      color: #0f766e;
+      margin-top: 0.125rem;
+    }
+
+    .attachment-list {
+      list-style: none;
+      margin: 0.75rem 0 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .attachment-list li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      background: #f8fafc;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8125rem;
+      color: var(--text-main);
+    }
+
+    .attachment-list li span.file-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .attachment-remove {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 0.125rem;
+      display: flex;
+      flex-shrink: 0;
+    }
+
+    .attachment-remove:hover {
+      color: var(--error-text);
     }
 
     button.submit-btn {
@@ -237,6 +324,27 @@
 
     @keyframes spin {
       to { transform: rotate(360deg); }
+    }
+
+    .submit-hint {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.375rem;
+      margin-top: 0.75rem;
+    }
+
+    .submit-hint-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--brand-green);
+      flex-shrink: 0;
+    }
+
+    .submit-hint span.text {
+      font-size: 0.75rem;
+      color: var(--text-muted);
     }
 
     #status-message {
@@ -365,7 +473,7 @@
   <div class="app-container">
     <header class="brand-header">
       <div class="header-text">
-        <div class="subtitle">Project Management Portal</div>
+        <div class="subtitle">Quick Project Intake</div>
         <h1 class="logo">Simply<span>Doors</span></h1>
       </div>
       <div class="share-controls">
@@ -388,12 +496,12 @@
 
         <div class="form-grid">
           <div class="input-group">
-            <label for="companyName">Company / Builder Name <span class="required" aria-hidden="true">*</span></label>
-            <input type="text" id="companyName" name="companyName" autocomplete="organization" placeholder="e.g., Summit Construction" required>
+            <label for="contactName">Your Name <span class="required" aria-hidden="true">*</span></label>
+            <input type="text" id="contactName" name="contactName" autocomplete="name" placeholder="Full Name" required>
           </div>
           <div class="input-group">
-            <label for="contactName">Primary Contact <span class="required" aria-hidden="true">*</span></label>
-            <input type="text" id="contactName" name="contactName" autocomplete="name" placeholder="Full Name" required>
+            <label for="companyName">Company <span class="optional-hint">(if applicable)</span></label>
+            <input type="text" id="companyName" name="companyName" autocomplete="organization" placeholder="Optional">
           </div>
 
           <div class="input-group">
@@ -402,28 +510,38 @@
           </div>
           <div class="input-group">
             <label for="email">Email Address <span class="required" aria-hidden="true">*</span></label>
-            <input type="email" id="email" name="email" autocomplete="email" inputmode="email" placeholder="contact@company.com" required>
+            <input type="email" id="email" name="email" autocomplete="email" inputmode="email" placeholder="you@email.com" required>
           </div>
 
           <div class="input-group full-width">
-            <label for="billingAddress">Billing Address <span class="required" aria-hidden="true">*</span></label>
-            <input type="text" id="billingAddress" name="billingAddress" autocomplete="street-address" placeholder="Street, City, State, ZIP" required>
+            <label for="projectAddress">Project Address <span class="required" aria-hidden="true">*</span></label>
+            <input type="text" id="projectAddress" name="projectAddress" autocomplete="street-address" placeholder="Where's the job?" required>
           </div>
 
           <div class="input-group full-width">
-            <label for="jobSiteAddress">Job Site Address <span class="required" aria-hidden="true">*</span></label>
-            <input type="text" id="jobSiteAddress" name="jobSiteAddress" autocomplete="off" placeholder="Street, City, State, ZIP" required>
+            <label for="projectDescription">Project Description <span class="required" aria-hidden="true">*</span></label>
+            <textarea id="projectDescription" name="projectDescription" rows="4" placeholder="e.g. Replace 2 exterior doors and a few windows" required></textarea>
           </div>
 
           <div class="input-group full-width">
-            <label for="projectScope">Project Scope &amp; Specifications <span class="required" aria-hidden="true">*</span></label>
-            <textarea id="projectScope" name="projectScope" rows="5" placeholder="Specify required doors, window units, tempered glass needs, and trim details..." required></textarea>
+            <label for="attachments-input">Photos &amp; Documents <span class="optional-hint">(optional)</span></label>
+            <label class="dropzone" for="attachments-input" id="dropzone">
+              <svg class="dropzone-icon" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M14 8h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              <div class="dropzone-title">Tap to add photos or files</div>
+              <div class="dropzone-hint">Site photos, measurements, plans, etc. (20 MB total max)</div>
+              <input type="file" id="attachments-input" multiple accept="image/*,.pdf,.doc,.docx,.heic">
+            </label>
+            <ul class="attachment-list" id="attachment-list" hidden></ul>
           </div>
         </div>
 
         <button type="submit" class="submit-btn" id="submit-btn">
-          <span id="submit-btn-label">Submit Project Details</span>
+          <span id="submit-btn-label">Submit</span>
         </button>
+        <div class="submit-hint">
+          <span class="submit-hint-dot" aria-hidden="true"></span>
+          <span class="text">Takes about a minute. We'll follow up shortly.</span>
+        </div>
         <div id="status-message" role="status" aria-live="polite"></div>
       </form>
     </div>
@@ -445,11 +563,56 @@
     // Real abuse prevention (rate limiting, validation) must live server-side.
     const APP_TOKEN = 'SimplyDoors2026-Secure';
     const SUBMIT_TIMEOUT_MS = 15000;
+    const MAX_ATTACHMENTS_BYTES = 20 * 1024 * 1024; // keep well under Gmail's ~25MB message cap
 
     const form = document.getElementById('intake-form');
     const submitBtn = document.getElementById('submit-btn');
     const submitBtnLabel = document.getElementById('submit-btn-label');
     const status = document.getElementById('status-message');
+    const attachmentsInput = document.getElementById('attachments-input');
+    const attachmentList = document.getElementById('attachment-list');
+
+    // Selected files live here (not just in the <input>) so removing one
+    // doesn't require rebuilding the input's native FileList.
+    let selectedFiles = [];
+
+    function formatBytes(bytes) {
+      if (bytes < 1024) return `${bytes} B`;
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    }
+
+    function renderAttachmentList() {
+      attachmentList.innerHTML = '';
+      attachmentList.hidden = selectedFiles.length === 0;
+      selectedFiles.forEach((file, index) => {
+        const li = document.createElement('li');
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'file-name';
+        nameSpan.textContent = `${file.name} (${formatBytes(file.size)})`;
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'attachment-remove';
+        removeBtn.setAttribute('aria-label', `Remove ${file.name}`);
+        removeBtn.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>';
+        removeBtn.addEventListener('click', () => {
+          selectedFiles.splice(index, 1);
+          renderAttachmentList();
+        });
+
+        li.appendChild(nameSpan);
+        li.appendChild(removeBtn);
+        attachmentList.appendChild(li);
+      });
+    }
+
+    attachmentsInput.addEventListener('change', () => {
+      selectedFiles = selectedFiles.concat(Array.from(attachmentsInput.files));
+      attachmentsInput.value = ''; // allow re-adding/re-selecting the same file later
+      renderAttachmentList();
+    });
 
     function setStatus(kind, message) {
       status.textContent = message;
@@ -458,7 +621,7 @@
 
     function setSubmitting(isSubmitting) {
       submitBtn.disabled = isSubmitting;
-      submitBtnLabel.textContent = isSubmitting ? 'Submitting...' : 'Submit Project Details';
+      submitBtnLabel.textContent = isSubmitting ? 'Submitting...' : 'Submit';
       const existingSpinner = submitBtn.querySelector('.spinner');
       if (isSubmitting && !existingSpinner) {
         const spinner = document.createElement('span');
@@ -478,8 +641,20 @@
         return;
       }
 
+      const totalAttachmentBytes = selectedFiles.reduce((sum, file) => sum + file.size, 0);
+      if (totalAttachmentBytes > MAX_ATTACHMENTS_BYTES) {
+        setStatus('error', `Attachments are too large (${formatBytes(totalAttachmentBytes)}). Please keep the total under ${formatBytes(MAX_ATTACHMENTS_BYTES)}.`);
+        return;
+      }
+
       const formData = new FormData(form);
       formData.append('appToken', APP_TOKEN);
+      // Give each file its own field name — a single repeated field name
+      // ("attachments") is not reliably readable as multiple files from the
+      // Apps Script side, so number them instead.
+      selectedFiles.forEach((file, index) => {
+        formData.append(`attachment_${index}`, file, file.name);
+      });
 
       setSubmitting(true);
       status.className = '';
@@ -505,8 +680,10 @@
         const data = await response.json().catch(() => null);
 
         if (data && data.result === 'success') {
-          setStatus('success', 'Project intake sent. Our team will follow up shortly.');
+          setStatus('success', "Got it, thanks! We've received your info and will follow up shortly.");
           form.reset();
+          selectedFiles = [];
+          renderAttachmentList();
         } else {
           setStatus('error', (data && data.message) || 'Something went wrong submitting the form. Please try again.');
         }
