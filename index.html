@@ -216,6 +216,10 @@
       display: block;
     }
 
+    .dropzone[hidden] {
+      display: none;
+    }
+
     .dropzone input[type="file"] {
       position: absolute;
       opacity: 0;
@@ -527,7 +531,7 @@
             <label class="dropzone" for="attachments-input" id="dropzone">
               <svg class="dropzone-icon" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M14 8h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
               <div class="dropzone-title">Tap to add photos or files</div>
-              <div class="dropzone-hint">Site photos, measurements, plans, etc. (20 MB total max)</div>
+              <div class="dropzone-hint">Site photos, measurements, plans, etc. (up to 3 files, 20 MB total)</div>
               <input type="file" id="attachments-input" multiple accept="image/*,.pdf,.doc,.docx,.heic">
             </label>
             <ul class="attachment-list" id="attachment-list" hidden></ul>
@@ -563,6 +567,7 @@
     const APP_TOKEN = 'SimplyDoors2026-Secure';
     const SUBMIT_TIMEOUT_MS = 15000;
     const MAX_ATTACHMENTS_BYTES = 20 * 1024 * 1024; // keep well under Gmail's ~25MB message cap
+    const MAX_ATTACHMENTS = 3;
 
     const form = document.getElementById('intake-form');
     const submitBtn = document.getElementById('submit-btn');
@@ -570,6 +575,7 @@
     const status = document.getElementById('status-message');
     const attachmentsInput = document.getElementById('attachments-input');
     const attachmentList = document.getElementById('attachment-list');
+    const dropzone = document.getElementById('dropzone');
 
     // Selected files live here (not just in the <input>) so removing one
     // doesn't require rebuilding the input's native FileList.
@@ -584,6 +590,7 @@
     function renderAttachmentList() {
       attachmentList.innerHTML = '';
       attachmentList.hidden = selectedFiles.length === 0;
+      dropzone.hidden = selectedFiles.length >= MAX_ATTACHMENTS;
       selectedFiles.forEach((file, index) => {
         const li = document.createElement('li');
 
@@ -608,9 +615,16 @@
     }
 
     attachmentsInput.addEventListener('change', () => {
-      selectedFiles = selectedFiles.concat(Array.from(attachmentsInput.files));
+      const newFiles = Array.from(attachmentsInput.files);
       attachmentsInput.value = ''; // allow re-adding/re-selecting the same file later
+
+      const roomLeft = MAX_ATTACHMENTS - selectedFiles.length;
+      selectedFiles = selectedFiles.concat(newFiles.slice(0, roomLeft));
       renderAttachmentList();
+
+      if (newFiles.length > roomLeft) {
+        setStatus('error', `You can attach up to ${MAX_ATTACHMENTS} files. Remove one to add another.`);
+      }
     });
 
     function setStatus(kind, message) {
