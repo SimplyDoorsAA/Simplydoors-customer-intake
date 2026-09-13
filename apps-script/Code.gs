@@ -24,6 +24,10 @@ const SPREADSHEET_ID = '19wstlrr2cPf3_hvW836lOFqQ_faXvV_jq9jBx0ySBzo';
 // Sheet tab submissions are written to. If no sheet with this name exists,
 // falls back to the spreadsheet's first sheet (see getSubmissionsSheet).
 const SHEET_NAME = 'Submissions';
+// MailApp/Gmail caps a single outgoing message (body + attachments combined)
+// at roughly 25MB. Stay comfortably under that so a large-but-under-client-
+// limit upload still can't produce an email Gmail silently refuses to send.
+const MAX_ATTACHMENTS_BYTES = 20 * 1024 * 1024;
 
 function doPost(e) {
   try {
@@ -38,14 +42,16 @@ function doPost(e) {
     }
 
     const data = {
-      companyName: sanitizeCell(e.parameter.companyName),
       contactName: sanitizeCell(e.parameter.contactName),
+      companyName: sanitizeCell(e.parameter.companyName),
       phone: sanitizeCell(e.parameter.phone),
       email: sanitizeCell(e.parameter.email),
-      billingAddress: sanitizeCell(e.parameter.billingAddress),
-      jobSiteAddress: sanitizeCell(e.parameter.jobSiteAddress),
-      projectScope: sanitizeCell(e.parameter.projectScope)
+      projectAddress: sanitizeCell(e.parameter.projectAddress),
+      projectDescription: sanitizeCell(e.parameter.projectDescription)
     };
+
+    const attachments = collectAttachments(e);
+    const attachmentNames = attachments.map(function (file) { return file.getName(); });
 
     // Saving the submission and notifying the team are separate concerns: a
     // customer's data being recorded must never depend on whether the
@@ -54,13 +60,13 @@ function doPost(e) {
     // let a mail failure make a successfully-saved submission look failed.
     const rowValues = [
       new Date(),
-      data.companyName,
       data.contactName,
+      data.companyName,
       data.phone,
       data.email,
-      data.billingAddress,
-      data.jobSiteAddress,
-      data.projectScope,
+      data.projectAddress,
+      data.projectDescription,
+      sanitizeCell(attachmentNames.join(', ')),
       'pending' // email status, overwritten below once we know the outcome
     ];
     const statusColumn = rowValues.length;
@@ -76,7 +82,7 @@ function doPost(e) {
       lock.releaseLock();
     }
 
-    const emailSent = notifyTeam(data);
+    const emailSent = notifyTeam(data, attachments);
     sheet.getRange(rowIndex, statusColumn).setValue(emailSent ? 'sent' : 'failed');
 
     return jsonResponse({ result: 'success' });
@@ -85,26 +91,56 @@ function doPost(e) {
   }
 }
 
-function notifyTeam(data) {
-  const subject = `New Project Intake: ${data.companyName || 'Unknown Builder'}`;
-  const body = [
+// The client sends each selected file under its own field name
+// (attachment_0, attachment_1, ...) rather than repeating one field name,
+// since e.files does not reliably expose more than one blob per field name.
+function collectAttachments(e) {
+  if (!e.files) return [];
+
+  const attachments = [];
+  let totalBytes = 0;
+
+  Object.keys(e.files)
+    .filter(function (name) { return name.indexOf('attachment_') === 0; })
+    .sort() // attachment_0, attachment_1, ... — keep the user's selection order
+    .forEach(function (name) {
+      const blob = e.files[name];
+      totalBytes += blob.getBytes().length;
+      if (totalBytes > MAX_ATTACHMENTS_BYTES) {
+        throw new Error('Attachments are too large to email. Please resend with less than 20MB total.');
+      }
+      attachments.push(blob);
+    });
+
+  return attachments;
+}
+
+function notifyTeam(data, attachments) {
+  const subject = `New Project Intake: ${data.contactName || 'Unknown Contact'}`;
+  const bodyLines = [
     'You have received a new project intake submission.',
     '',
-    'COMPANY DETAILS',
-    `Builder: ${data.companyName || 'N/A'}`,
-    `Contact: ${data.contactName || 'N/A'}`,
+    'CONTACT DETAILS',
+    `Name: ${data.contactName || 'N/A'}`,
+    `Company: ${data.companyName || 'N/A'}`,
     `Phone: ${data.phone || 'N/A'}`,
     `Email: ${data.email || 'N/A'}`,
     '',
     'PROJECT DETAILS',
-    `Billing Address: ${data.billingAddress || 'N/A'}`,
-    `Job Site Address: ${data.jobSiteAddress || 'N/A'}`,
+    `Project Address: ${data.projectAddress || 'N/A'}`,
     '',
-    'SCOPE OF WORK:',
-    data.projectScope || 'N/A'
-  ].join('\n');
+    'PROJECT DESCRIPTION:',
+    data.projectDescription || 'N/A'
+  ];
 
-  const options = { to: NOTIFY_EMAIL, subject: subject, body: body };
+  if (attachments.length > 0) {
+    bodyLines.push('', `ATTACHMENTS (${attachments.length}): see attached files.`);
+  }
+
+  const options = { to: NOTIFY_EMAIL, subject: subject, body: bodyLines.join('\n') };
+  if (attachments.length > 0) {
+    options.attachments = attachments;
+  }
   if (isValidEmail(data.email)) {
     options.replyTo = data.email;
   }
