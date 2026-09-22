@@ -1,0 +1,46 @@
+# Checks that a customer can actually reach the intake form and its backend.
+#
+# It runs every 30 minutes, and again on every push, from GitHub's servers —
+# not from any machine of Adem's — so it sees what a customer sees.
+#
+# The failure it exists to catch: an Apps Script deployment set to "Only
+# myself" answers a signed-in browser normally but redirects everyone else to
+# a Google sign-in page. That happened between 4 and 13 September 2026 and no
+# one noticed for nine days. When this check fails, GitHub emails you.
+name: Health
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reachable:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: The form page loads
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 \
+            https://simplydoorsaa.github.io/Simplydoors-customer-intake/)
+          echo "form page: HTTP $code"
+          test "$code" = "200"
+
+      - name: The backend answers without asking anyone to sign in
+        run: |
+          url="https://script.google.com/macros/s/AKfycbwEqJe2cIjLLQAkLbht-iowIX1N1m_aVxbm5pBHUEQTZbbUkwPS94_WFNglOBB4tcNFaw/exec"
+          body=$(curl -sL --max-time 30 -w '\nFINAL_URL:%{url_effective}' "$url")
+          echo "$body"
+          if echo "$body" | grep -q 'accounts.google.com'; then
+            echo "::error::The backend is redirecting customers to a Google sign-in page. In Apps Script open Deploy > Manage deployments, edit the live deployment, and set 'Who has access' to Anyone."
+            exit 1
+          fi
+          if ! echo "$body" | grep -q '"result":"ok"'; then
+            echo "::error::The backend did not return the expected health response. Deploy the current Code.gs with Manage deployments > edit > New version."
+            exit 1
+          fi
