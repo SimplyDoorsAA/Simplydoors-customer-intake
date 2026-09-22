@@ -499,8 +499,8 @@
 
         <div class="form-grid">
           <div class="input-group">
-            <label for="contactName">Your Name</label>
-            <input type="text" id="contactName" name="contactName" autocomplete="name" placeholder="Full name">
+            <label for="contactName">Your Name <span class="required" aria-hidden="true">*</span></label>
+            <input type="text" id="contactName" name="contactName" autocomplete="name" placeholder="Full name" required>
           </div>
           <div class="input-group">
             <label for="companyName">Company <span class="optional-hint">(if applicable)</span></label>
@@ -508,7 +508,7 @@
           </div>
 
           <div class="input-group">
-            <label for="phone">Phone Number</label>
+            <label for="phone">Phone Number <span class="optional-hint">(phone or email needed)</span></label>
             <input type="tel" id="phone" name="phone" autocomplete="tel" inputmode="tel" placeholder="(555) 123-4567">
           </div>
           <div class="input-group">
@@ -646,11 +646,104 @@
       }
     }
 
+    // --- Offline-safe queue -------------------------------------------------
+    // A submission is saved on the customer's own device BEFORE it is sent, so
+    // a dropped signal or a slow backend can never lose a lead. Whatever is
+    // still queued is retried on the next page load and whenever the device
+    // comes back online. IndexedDB (not localStorage) because it stores the
+    // selected File objects as they are, without re-encoding them.
+    const DB_NAME = 'sd-intake';
+    const STORE = 'pending';
+
+    function openDb() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, 1);
+        request.onupgradeneeded = () => request.result.createObjectStore(STORE, { keyPath: 'id' });
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    function tx(db, mode, run) {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(STORE, mode);
+        const result = run(transaction.objectStore(STORE));
+        transaction.oncomplete = () => resolve(result && result.result);
+        transaction.onerror = () => reject(transaction.error);
+      });
+    }
+
+    async function queueSave(record) {
+      const db = await openDb();
+      return tx(db, 'readwrite', (store) => store.put(record));
+    }
+
+    async function queueList() {
+      const db = await openDb();
+      return (await tx(db, 'readonly', (store) => store.getAll())) || [];
+    }
+
+    async function queueDelete(id) {
+      const db = await openDb();
+      return tx(db, 'readwrite', (store) => store.delete(id));
+    }
+
+    // Sends one queued record. Returns true only when the backend confirms it
+    // stored the submission, so a network blip leaves the record queued.
+    async function sendRecord(record) {
+      const formData = new FormData();
+      formData.append('appToken', APP_TOKEN);
+      formData.append('submissionId', record.id); // lets the backend ignore a duplicate retry
+      Object.entries(record.fields).forEach(([key, value]) => formData.append(key, value));
+      record.files.forEach((file, index) => formData.append(`attachment_${index}`, file, file.name));
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), SUBMIT_TIMEOUT_MS);
+      try {
+        const response = await fetch(SCRIPT_URL, { method: 'POST', body: formData, signal: controller.signal });
+        if (!response.ok) return false;
+        const data = await response.json().catch(() => null);
+        return !!(data && data.result === 'success');
+      } catch (error) {
+        return false;
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    }
+
+    // Retries everything still queued. Runs on page load, when the device comes
+    // back online, and right after a submission.
+    async function flushQueue() {
+      let pending;
+      try {
+        pending = await queueList();
+      } catch (error) {
+        return; // no IndexedDB (private window, old browser) — nothing to retry
+      }
+      for (const record of pending) {
+        if (await sendRecord(record)) {
+          await queueDelete(record.id).catch(() => {});
+        }
+      }
+    }
+
+    window.addEventListener('online', flushQueue);
+    flushQueue();
+
     form.addEventListener('submit', async function (e) {
       e.preventDefault();
 
       if (!form.checkValidity()) {
         form.reportValidity();
+        return;
+      }
+
+      // A lead with no phone and no email cannot be followed up, so require one.
+      const phoneField = document.getElementById('phone');
+      const emailField = document.getElementById('email');
+      if (!phoneField.value.trim() && !emailField.value.trim()) {
+        setStatus('error', 'Please add a phone number or an email address so we can get back to you.');
+        phoneField.focus();
         return;
       }
 
@@ -660,56 +753,51 @@
         return;
       }
 
-      const formData = new FormData(form);
-      formData.append('appToken', APP_TOKEN);
-      // Give each file its own field name — a single repeated field name
-      // ("attachments") is not reliably readable as multiple files from the
-      // Apps Script side, so number them instead.
-      selectedFiles.forEach((file, index) => {
-        formData.append(`attachment_${index}`, file, file.name);
+      // Each file gets its own numbered field name — a single repeated field
+      // name ("attachments") is not reliably readable as multiple files from
+      // the Apps Script side.
+      const fields = {};
+      new FormData(form).forEach((value, key) => {
+        if (typeof value === 'string') fields[key] = value;
       });
+      const record = {
+        id: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random()),
+        fields: fields,
+        files: selectedFiles.slice(),
+        savedAt: new Date().toISOString()
+      };
 
       setSubmitting(true);
       status.className = '';
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), SUBMIT_TIMEOUT_MS);
-
+      // Save first, send second. If saving isn't possible (private window, old
+      // browser), fall through and send directly rather than blocking the lead.
+      let queued = false;
       try {
-        // The Apps Script backend returns a JSON body — { result: 'success' }
-        // or { result: 'error', message } — so read it instead of firing the
-        // request blind. This is a plain FormData POST with no custom headers,
-        // so it's an unpreflighted "simple request" the browser sends either way.
-        const response = await fetch(SCRIPT_URL, {
-          method: 'POST',
-          body: formData,
-          signal: controller.signal
-        });
-
-        if (!response.ok) {
-          throw new Error(`http-${response.status}`);
-        }
-
-        const data = await response.json().catch(() => null);
-
-        if (data && data.result === 'success') {
-          setStatus('success', "Got it, thanks! We've received your info and will follow up shortly.");
-          form.reset();
-          selectedFiles = [];
-          renderAttachmentList();
-        } else {
-          setStatus('error', (data && data.message) || 'Something went wrong submitting the form. Please try again.');
-        }
+        await queueSave(record);
+        queued = true;
       } catch (error) {
-        if (error.name === 'AbortError') {
-          setStatus('error', 'The request timed out. Please check your connection and try again.');
-        } else {
-          setStatus('error', 'Network error. Please check your connection and try again.');
-        }
-      } finally {
-        clearTimeout(timeoutId);
-        setSubmitting(false);
+        queued = false;
       }
+
+      const sent = await sendRecord(record);
+
+      if (sent) {
+        if (queued) await queueDelete(record.id).catch(() => {});
+        setStatus('success', "Got it, thanks! We've received your info and will follow up shortly.");
+        form.reset();
+        selectedFiles = [];
+        renderAttachmentList();
+      } else if (queued) {
+        setStatus('success', "Got it — your details are saved on this device and will send themselves as soon as you have signal. You can close this page.");
+        form.reset();
+        selectedFiles = [];
+        renderAttachmentList();
+      } else {
+        setStatus('error', 'We could not send that just now. Please check your connection and tap Submit again.');
+      }
+
+      setSubmitting(false);
     });
 
     async function shareApp() {
