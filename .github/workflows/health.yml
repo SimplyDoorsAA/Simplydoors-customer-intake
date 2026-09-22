@@ -1,12 +1,20 @@
 # Checks that a customer can actually reach the intake form and its backend.
 #
-# It runs every 30 minutes, and again on every push, from GitHub's servers —
-# not from any machine of Adem's — so it sees what a customer sees.
+# Runs every 30 minutes, and again on every push, from GitHub's servers — not
+# from any machine of Adem's — so it sees what a customer sees.
 #
 # The failure it exists to catch: an Apps Script deployment set to "Only
 # myself" answers a signed-in browser normally but redirects everyone else to
 # a Google sign-in page. That happened between 4 and 13 September 2026 and no
-# one noticed for nine days. When this check fails, GitHub emails you.
+# one noticed for nine days.
+#
+# How it decides, and why: an /exec URL always answers with a redirect. Where
+# it points is the answer.
+#   accounts.google.com            -> customers are hitting a login wall. FAIL.
+#   script.googleusercontent.com   -> the deployment is public. PASS.
+# Reading the page behind that second address is only a bonus check: Google
+# often refuses that follow-up request from a datacenter like GitHub's, which
+# says nothing about whether customers can submit. So that part only warns.
 name: Health
 
 on:
@@ -19,6 +27,10 @@ on:
 permissions:
   contents: read
 
+env:
+  BACKEND: https://script.google.com/macros/s/AKfycbwEqJe2cIjLLQAkLbht-iowIX1N1m_aVxbm5pBHUEQTZbbUkwPS94_WFNglOBB4tcNFaw/exec
+  FORM: https://simplydoorsaa.github.io/Simplydoors-customer-intake/
+
 jobs:
   reachable:
     runs-on: ubuntu-latest
@@ -26,21 +38,44 @@ jobs:
     steps:
       - name: The form page loads
         run: |
-          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 \
-            https://simplydoorsaa.github.io/Simplydoors-customer-intake/)
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$FORM")
           echo "form page: HTTP $code"
           test "$code" = "200"
 
-      - name: The backend answers without asking anyone to sign in
+      - name: The backend is not asking customers to sign in
         run: |
-          url="https://script.google.com/macros/s/AKfycbwEqJe2cIjLLQAkLbht-iowIX1N1m_aVxbm5pBHUEQTZbbUkwPS94_WFNglOBB4tcNFaw/exec"
-          body=$(curl -sL --max-time 30 -w '\nFINAL_URL:%{url_effective}' "$url")
-          echo "$body"
-          if echo "$body" | grep -q 'accounts.google.com'; then
-            echo "::error::The backend is redirecting customers to a Google sign-in page. In Apps Script open Deploy > Manage deployments, edit the live deployment, and set 'Who has access' to Anyone."
-            exit 1
-          fi
-          if ! echo "$body" | grep -q '"result":"ok"'; then
-            echo "::error::The backend did not return the expected health response. Deploy the current Code.gs with Manage deployments > edit > New version."
-            exit 1
+          location=$(curl -s -o /dev/null -w '%{redirect_url}' --max-time 25 "$BACKEND")
+          echo "backend redirects to: ${location:-<no redirect>}"
+          case "$location" in
+            *accounts.google.com*)
+              echo "::error::Customers are being sent to a Google sign-in page. In Apps Script: Deploy > Manage deployments > edit the live deployment > set 'Who has access' to Anyone."
+              exit 1
+              ;;
+            *script.googleusercontent.com*)
+              echo "Public deployment confirmed."
+              ;;
+            "")
+              body=$(curl -s --max-time 25 "$BACKEND")
+              echo "$body" | head -c 300
+              echo "$body" | grep -q '"result":"ok"' || {
+                echo "::error::The backend answered, but not with the expected health response. Deploy the current Code.gs with Manage deployments > edit > New version."
+                exit 1
+              }
+              ;;
+            *)
+              echo "::error::Unexpected redirect: $location"
+              exit 1
+              ;;
+          esac
+
+      - name: Read the health response (bonus check, never fails the run)
+        continue-on-error: true
+        run: |
+          body=$(curl -sL --max-time 25 \
+            -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36" \
+            "$BACKEND")
+          if echo "$body" | grep -q '"result":"ok"'; then
+            echo "Health response read: OK"
+          else
+            echo "::warning::Could not read the health payload from this runner. Google often refuses this follow-up request from datacenter IPs; the sign-in check above is the one that matters."
           fi
